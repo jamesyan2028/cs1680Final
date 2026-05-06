@@ -86,7 +86,7 @@ func handleUserInput(client pb.SnowcastControlClient) {
 			continue
 		case len(strings.Fields(input)) >= 1 && checkOnlyNumbers(strings.Fields(input)[0]):
 			fields := strings.Fields(input)
-			stationNum, err := strconv.ParseUint(input, 10, 16)
+			stationNum, err := strconv.ParseUint(fields[0], 10, 16)
 			if err != nil {
 				fmt.Printf("Error Parsing Station Number: %s\n", err)
 				continue
