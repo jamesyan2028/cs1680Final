@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"sync"
+	"net"
 
 	pb "snowcast-jamesyan2028/pkg/protocol"
 
@@ -19,8 +21,12 @@ import (
 )
 
 var (
-	joinedStation bool = false
-	listenerPort  uint64
+    joinedStation  bool = false
+    listenerPort   uint64
+    currentStation uint32 = 0
+    currentBitrate string = "high"
+	flushMetrics   bool = false
+    switchMu       sync.Mutex
 )
 
 func main() {
@@ -59,7 +65,9 @@ func main() {
 		log.Fatalf("Handshake failed: %v", err)
 	}
 	fmt.Printf("Welcome to Snowcast! The server has %d stations\n", welcome.NumStations)
- 
+	
+	go autoSwitch(client)
+
 	exit := make(chan bool)
 
 	go func() {
@@ -113,7 +121,12 @@ func handleUserInput(client pb.SnowcastControlClient) {
 				continue
 			}
 
+			switchMu.Lock()
+			currentStation = uint32(stationNum)
+			currentBitrate = bitrate
 			joinedStation = true
+			flushMetrics = true
+			switchMu.Unlock()
 			go handleServerStream(stream)
 		case input == "l":
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -162,4 +175,80 @@ func checkOnlyNumbers(s string)bool {
 		}
 	} 
 	return true
+}
+
+func autoSwitch(client pb.SnowcastControlClient) {
+    addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", listenerPort))
+    if err != nil {
+        return
+    }
+    conn, err := net.ListenUDP("udp", addr)
+    if err != nil {
+        return
+    }
+    defer conn.Close()
+
+    buf := make([]byte, 1500)
+    var totalBytes int
+    lastCheck := time.Now()
+
+    for {
+        conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+        n, err := conn.Read(buf)
+        if err == nil {
+            totalBytes += n
+        }
+
+        if time.Since(lastCheck) >= 3*time.Second {
+            elapsed := time.Since(lastCheck).Seconds()
+            throughput := float64(totalBytes) / elapsed / 1024.0
+            totalBytes = 0
+            lastCheck = time.Now()
+
+            switchMu.Lock()
+			
+			if flushMetrics {
+				flushMetrics = false
+				switchMu.Unlock()
+				continue
+			}
+
+			fmt.Fprintf(os.Stderr, "[metrics] throughput: %.1f KB/s | bitrate: %s\n", throughput, currentBitrate)
+
+            if !joinedStation {
+                switchMu.Unlock()
+                continue
+            }
+            station := currentStation
+            bitrate := currentBitrate
+
+            var newBitrate string
+            if throughput < 3.0 && bitrate != "low" {
+                newBitrate = "low"
+            } else if throughput >= 3.0 && throughput < 10.0 && bitrate == "high" {
+                newBitrate = "medium"
+            } else if throughput >= 3.5 && bitrate == "low" {
+                newBitrate = "medium"
+            } else if throughput >= 7.5 && bitrate == "medium" {
+                newBitrate = "high"
+            }
+            switchMu.Unlock()
+
+            if newBitrate != "" {
+                fmt.Fprintf(os.Stderr, "[auto-switch] throughput %.1f KB/s -> switching to %s\n", throughput, newBitrate)
+                stream, err := client.SetStation(context.Background(), &pb.SetStationMessage{
+                    StationNumber: station,
+                    UdpPort:       uint32(listenerPort),
+                    Bitrate:       newBitrate,
+                })
+                if err == nil {
+                    switchMu.Lock()
+                    currentBitrate = newBitrate
+					joinedStation = true
+                    switchMu.Unlock()
+                    go handleServerStream(stream)
+                }
+            }
+        }
+    }
 }
