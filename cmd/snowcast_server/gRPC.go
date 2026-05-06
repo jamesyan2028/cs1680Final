@@ -101,6 +101,21 @@ func (s *SnowcastServer) SetStation(req *pb.SetStationMessage, stream pb.Snowcas
 	}
 }
 
+func (s *SnowcastServer) ListStations(ctx context.Context, req *pb.ListStationsRequest) (*pb.ListStationsResponse, error) {
+    var stations []*pb.StationInfo
+    for i := range stationList {
+        station := &stationList[i]
+        station.mutex.Lock()
+        stations = append(stations, &pb.StationInfo{
+            StationNumber: uint32(i),
+            SongName:      station.name,
+            BitrateLevels: []string{"low", "medium", "high"},
+        })
+        station.mutex.Unlock()
+    }
+    return &pb.ListStationsResponse{Stations: stations}, nil
+}
+
 func (s *SnowcastServer) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb.DisconnectResponse, error) {
 	clientIP := getClientIP(ctx)
 	clientKey := fmt.Sprintf("%s:%d", clientIP, req.UdpPort)

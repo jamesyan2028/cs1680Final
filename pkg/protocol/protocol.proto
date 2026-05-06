@@ -24,6 +24,18 @@ message InvalidCommandMessage {
     string reply_string = 1;
 }
 
+message StationInfo {
+    uint32 station_number = 1;
+    string song_name = 2;
+    repeated string bitrate_levels = 3;
+}
+
+message ListStationsRequest {}
+
+message ListStationsResponse {
+    repeated StationInfo stations = 1;
+}
+
 message DisconnectRequest {
     uint32 udp_port = 2;
 }
@@ -41,6 +53,7 @@ message ServerEvent {
 
 service SnowcastControl {
     rpc Handshake(HelloMessage) returns (WelcomeMessage);
+    rpc ListStations(ListStationsRequest) returns (ListStationsResponse);
     rpc SetStation(SetStationMessage) returns (stream ServerEvent);
     rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
 }

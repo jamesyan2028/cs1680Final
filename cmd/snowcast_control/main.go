@@ -102,6 +102,18 @@ func handleUserInput(client pb.SnowcastControlClient) {
 
 			joinedStation = true
 			handleServerStream(stream)
+		case input == "l":
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			resp, err := client.ListStations(ctx, &pb.ListStationsRequest{})
+			cancel()
+			if err != nil {
+				fmt.Printf("Error listing stations: %v\n", err)
+				continue
+			}
+			for _, s := range resp.Stations {
+				fmt.Printf("Station %d: %s [bitrates: %s]\n",
+					s.StationNumber, s.SongName, strings.Join(s.BitrateLevels, ", "))
+			}
 		default:
 			fmt.Printf("Invalid Command: %s\n", input)
 			continue
