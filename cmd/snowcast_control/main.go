@@ -114,7 +114,7 @@ func handleUserInput(client pb.SnowcastControlClient) {
 			}
 
 			joinedStation = true
-			handleServerStream(stream)
+			go handleServerStream(stream)
 		case input == "l":
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			resp, err := client.ListStations(ctx, &pb.ListStationsRequest{})
