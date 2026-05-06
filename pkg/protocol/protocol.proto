@@ -10,6 +10,7 @@ message HelloMessage {
 message SetStationMessage {
     uint32 station_number = 1;
     uint32 udp_port = 2;
+    string bitrate = 3;
 }
 
 message WelcomeMessage {

@@ -84,15 +84,28 @@ func handleUserInput(client pb.SnowcastControlClient) {
 			return
 		case input == "":
 			continue
-		case checkOnlyNumbers(input):
+		case len(strings.Fields(input)) >= 1 && checkOnlyNumbers(strings.Fields(input)[0]):
+			fields := strings.Fields(input)
 			stationNum, err := strconv.ParseUint(input, 10, 16)
 			if err != nil {
 				fmt.Printf("Error Parsing Station Number: %s\n", err)
+				continue
+			}
+
+			bitrate := "high"
+			if len(fields) >= 2 {
+				b := strings.ToLower(fields[1])
+				if b == "low" || b == "medium" || b == "high" {
+					bitrate = b
+				} else {
+					fmt.Printf("Invalid bitrate '%s', using 'high'. Options: low, medium, high\n", fields[1])
+				}
 			}
 
 			stream, err := client.SetStation(context.Background(), &pb.SetStationMessage{
 				StationNumber: uint32(stationNum),
 				UdpPort:       uint32(listenerPort),
+				Bitrate: bitrate,
 			})
 
 			if err != nil {

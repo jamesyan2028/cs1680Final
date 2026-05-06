@@ -71,8 +71,13 @@ func (s *SnowcastServer) SetStation(req *pb.SetStationMessage, stream pb.Snowcas
 
 	clientMutex.Lock()
 	clientInfo.currStation = stationNum
+	bitrate := req.Bitrate
+	if bitrate == "" {
+		bitrate = "high"
+	}
+	clientInfo.bitrate = bitrate
 	clientMutex.Unlock()
-
+	
 	station := &stationList[stationNum]
 	station.mutex.Lock()
 	station.clients = append(station.clients, clientInfo)

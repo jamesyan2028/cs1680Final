@@ -69,6 +69,7 @@ type SetStationMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	StationNumber uint32                 `protobuf:"varint,1,opt,name=station_number,json=stationNumber,proto3" json:"station_number,omitempty"`
 	UdpPort       uint32                 `protobuf:"varint,2,opt,name=udp_port,json=udpPort,proto3" json:"udp_port,omitempty"`
+	Bitrate       string                 `protobuf:"bytes,3,opt,name=bitrate,proto3" json:"bitrate,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -115,6 +116,13 @@ func (x *SetStationMessage) GetUdpPort() uint32 {
 		return x.UdpPort
 	}
 	return 0
+}
+
+func (x *SetStationMessage) GetBitrate() string {
+	if x != nil {
+		return x.Bitrate
+	}
+	return ""
 }
 
 type WelcomeMessage struct {
@@ -565,10 +573,11 @@ const file_pkg_protocol_protocol_proto_rawDesc = "" +
 	"\n" +
 	"\x1bpkg/protocol/protocol.proto\x12\bprotocol\")\n" +
 	"\fHelloMessage\x12\x19\n" +
-	"\budp_port\x18\x01 \x01(\rR\audpPort\"U\n" +
+	"\budp_port\x18\x01 \x01(\rR\audpPort\"o\n" +
 	"\x11SetStationMessage\x12%\n" +
 	"\x0estation_number\x18\x01 \x01(\rR\rstationNumber\x12\x19\n" +
-	"\budp_port\x18\x02 \x01(\rR\audpPort\"3\n" +
+	"\budp_port\x18\x02 \x01(\rR\audpPort\x12\x18\n" +
+	"\abitrate\x18\x03 \x01(\tR\abitrate\"3\n" +
 	"\x0eWelcomeMessage\x12!\n" +
 	"\fnum_stations\x18\x01 \x01(\rR\vnumStations\".\n" +
 	"\x0fAnnounceMessage\x12\x1b\n" +

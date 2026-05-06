@@ -20,6 +20,7 @@ import (
 type ClientInfo struct {
 	udpAddr *net.UDPAddr
 	currStation int
+	bitrate     string
 	eventChan chan *pb.ServerEvent
 }
 
@@ -27,6 +28,7 @@ type Station struct {
 	mutex sync.Mutex
 	clients []*ClientInfo
 	name string
+	bitrateKbps map[string]int
 }
 
 var (
@@ -97,7 +99,11 @@ func streamStation(id int, filename string, udpConn *net.UDPConn) {
 			currStation := &stationList[id]
 			currStation.mutex.Lock()
 			for _, client := range currStation.clients {
-				udpConn.WriteToUDP(buffer[:n], client.udpAddr)
+				chunkSize := bitrateChunkSize(client.bitrate)
+				if n < chunkSize {
+					chunkSize = n
+				}
+				udpConn.WriteToUDP(buffer[:chunkSize], client.udpAddr)
 			}
 			currStation.mutex.Unlock()
 		}
@@ -127,6 +133,17 @@ func streamStation(id int, filename string, udpConn *net.UDPConn) {
 		}
 
 	}
+}
+
+func bitrateChunkSize(bitrate string) int {
+    switch bitrate {
+    case "low":
+        return 375   // 64 kbps
+    case "medium":
+        return 750   // 128 kbps
+    default:         
+        return 1500  // around 192 kbps
+    }
 }
 
 func handleUserInput(grpcServer *grpc.Server) {
